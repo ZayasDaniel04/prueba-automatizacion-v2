@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon_bm.png">
+<title>Generador de Documentos de Cobro V2 &#x2014; GSSPIM</title>
+<script src="xlsx.full.min.js"></script>
+<script src="jszip.min.js"></script>
+<script src="exceljs.min.js"></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+<div class="logo"><a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;"><img src="img/Logobm.svg" style="width:80px;height:80px;object-fit:contain;filter:brightness(0) invert(1);"></a></div>  <div>
+    <h1>Generador de Documentos de Cobro</h1>
+    <p>Gerencia de Supervisi&#xF3;n de Sistemas de Pagos e Infraestructuras de Mercado</p>
+  </div>
+</header>
+<div class="container">
+  <div id="alert-area"></div>
+
+  <div class="card">
+    <div class="card-title">Paso 1 &#x2014; Cargar Excel de Sanciones</div>
+    <div class="card-sub">Carga el archivo <strong>Sanciones_impuestas.xlsm</strong> para autocompletar los datos</div>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <button class="btn btn-xl" id="btn-cargar">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Cargar Excel de Sanciones
+      </button>
+      <span class="lbl-archivo" id="lbl-archivo">Ning&#xFA;n archivo cargado</span>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx,.xlsm,.xls" style="display:none">
+  </div>
+
+  <div class="card" id="sec-tabla" style="display:none">
+    <div class="card-title">Paso 2 &#x2014; Selecciona el Registro</div>
+    <div class="card-sub">Busca por Instituci&#xF3;n, No. Memorando, Expediente o  No. Resoluci&#xF3;n, y haz clic en la fila</div>
+    <div class="search-bar">
+      <input type="text" id="buscador" placeholder="Buscar...">
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Instituci&#xF3;n</th> 
+            <th>No. Memorando</th>
+            <th>Expediente</th>
+            <th>No. Resoluci&#xF3;n</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-body"></tbody> 
+      </table>
+    </div>
+  </div>
+
+  <div class="card" id="sec-form" style="display:none">
+    <div class="card-title">Paso 3 &#x2014; Verifica y Edita los Datos</div>
+    <div class="card-sub">Todos los campos se autocompletan desde el Excel pero puedes editarlos libremente</div>
+    <div class="grid">
+      <div class="fg full">
+        <label>Nombre Instituci&#xF3;n <span class="req">*</span></label> 
+        <input type="text" id="inst-nombre" placeholder="Nombre completo de la instituci&#xF3;n">
+      </div>
+      <div class="fg">
+        <label>CASFIM <span class="req">*</span></label>
+        <input type="text" id="casfim" placeholder="Ej: 40012">
+      </div>
+      <div class="fg">
+        <label>Tipo de Operaci&#xF3;n</label>
+        <select id="operacion"><option value="S">S &#x2014; Sanci&#xF3;n</option><option value="D">D &#x2014; Devoluci&#xF3;n</option></select>
+      </div>
+      <div class="fg">
+        <label>No. Resoluci&#xF3;n <span class="req">*</span></label>
+        <input type="text" id="no-res" placeholder="Ej: S22-118-2026">
+      </div>
+      <div class="fg">
+        <label>Expediente <span class="req">*</span></label>
+        <input type="text" id="exp" placeholder="Ej: SP.ID.CDA.2025.109">
+      </div>
+      <div class="fg full">
+        <label>Importe (MXN) <span class="req">*</span></label>
+        <input type="number" id="importe" placeholder="Ingresa el importe" min="0" step="0.01">
+      </div>
+      <div class="fg full">
+        <label>* TEXTO (m&#xE1;x. 42 caracteres) <span class="req">*</span></label>
+        <input type="text" id="texto" placeholder="S22-118-2026/SP.ID.CDA.2025.109" maxlength="60">
+        <div class="cc" id="cc">0 / 42</div>
+      </div>
+    </div>
+    <hr class="div">
+    <div style="margin-bottom:16px;font-weight:600;font-size:13px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px">Datos del Memorando Word</div>
+    <div class="grid">
+      <div class="fg">
+        <label>No. Memorando (Ref.) <span class="req">*</span></label>
+        <input type="text" id="memo" placeholder="Ej: D02-2026-079">
+      </div>
+      <div class="fg">
+        <label>Fecha de solicitud de cobro<span class="req">*</span></label>
+        <input type="date" id="f-memo">
+        <div class="hint">Fecha de solicitud de cobro</div>
+      </div>
+      <div class="fg">
+        <label>Fecha de autorizaci&#xF3;n de cobro<span class="req">*</span></label>
+        <input type="date" id="f-escrito">
+        <div class="hint">Fecha autorizaci&#xF3;n de cobro</div>
+      </div>
+      <div class="fg">
+        <label>Fecha de recepci&#xF3;n de autorizaci&#xF3;n de cobro <span class="req">*</span></label>
+        <input type="date" id="f-recep">
+        <div class="hint">Fecha de recepci&#xF3;n de autorizaci&#xF3;n de cobro</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="sec-preview" style="display:none">
+    <div class="card-title">Vista Previa</div>
+    <div class="preview-box" id="preview"><em style="color:var(--muted)">Selecciona un registro para ver la vista previa...</em></div>
+  </div>
+
+  <div class="card" id="sec-generar" style="display:none">
+    <div class="card-title">Generar Documentos</div>
+    <div class="btns">
+      <button class="btn btn-p" onclick="generateExcel()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Generar Layout (Excel)
+      </button>
+      <button class="btn btn-s" onclick="generateWord()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Generar Memorando (Word)
+      </button>
+      <button class="btn btn-o" onclick="generateAll()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+        Generar Ambos
+      </button>
+    </div>
+  </div>
+</div>
+<footer>Banco de M&#xE9;xico &#xB7; GSSPIM &#xB7; Generador con carga desde Excel</footer>
+<script src="app2.js"></script>
+<script>
+const obsFields=['inst-nombre','casfim','no-res','exp','importe','texto','memo','f-memo','f-escrito','f-recep'];
+obsFields.forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('input',()=>{
+    document.getElementById('sec-preview').style.display='block';
+    document.getElementById('sec-generar').style.display='block';
+    updPreview();
+  });
+  if(el) el.addEventListener('change',()=>{
+    document.getElementById('sec-preview').style.display='block';
+    document.getElementById('sec-generar').style.display='block';
+    updPreview();
+  });
+});
+</script>
+</body>
+</html>

@@ -43,11 +43,36 @@ function numToWords(num){
     else{const t=Math.floor(rem/10),o=rem%10;if(t)r+=tens[t];if(o)r+=(t?' Y ':'')+ones[o];}
     return r.trim();
   }
+  function thousands(n){
+    // convierte hasta 999,999
+    if(n===0) return '';
+    const th=Math.floor(n/1000), rest=n%1000;
+    let r='';
+    if(th>0) r+=(th===1?'MIL':three(th)+' MIL')+' ';
+    if(rest>0) r+=three(rest);
+    return r.trim();
+  }
   const ip=Math.floor(num),dp=Math.round((num-ip)*100);
   let r='';
-  if(ip>=1000000){const m=Math.floor(ip/1000000);r+=(m===1?'UN MILLÓN':three(m)+' MILLONES')+' ';const rest=ip%1000000;if(rest>=1000){const th=Math.floor(rest/1000);r+=(th===1?'MIL':three(th)+' MIL')+' '+three(rest%1000);}else r+=three(rest);}
-  else if(ip>=1000){const th=Math.floor(ip/1000);r+=(th===1?'MIL':three(th)+' MIL')+' '+three(ip%1000);}
-  else r=three(ip);
+  if(ip>=1000000000000){
+    // billones (1,000,000,000,000)
+    const b=Math.floor(ip/1000000000000);
+    r+=(b===1?'UN BILLÓN':thousands(b)+' BILLONES')+' ';
+    const rest=ip%1000000000000;
+    if(rest>=1000000){
+      const m=Math.floor(rest/1000000);
+      r+=(m===1?'UN MILLÓN':thousands(m)+' MILLONES')+' ';
+      const rest2=rest%1000000;
+      if(rest2>0) r+=thousands(rest2);
+    } else if(rest>0){ r+=thousands(rest); }
+  } else if(ip>=1000000){
+    const m=Math.floor(ip/1000000);
+    r+=(m===1?'UN MILLÓN':thousands(m)+' MILLONES')+' ';
+    const rest=ip%1000000;
+    if(rest>0) r+=thousands(rest);
+  } else {
+    r=thousands(ip);
+  }
   return r.trim()+` PESOS ${String(dp).padStart(2,'0')}/100 M.N.`;
 }
 
@@ -278,7 +303,7 @@ function updPreview(){
 
   document.getElementById('preview').innerHTML=`
     <div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #e8e4de">
-      <strong style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b">📊 Layout Excel (BBVA)</strong>
+      <strong style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b">Layout Excel (BBVA)</strong>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:13px;margin-bottom:14px">
       <div><span class="tag">Institución</span><br>${inst}</div>
@@ -288,7 +313,7 @@ function updPreview(){
       <div><span class="tag">TEXTO</span><br>${texto}</div>
     </div>
     <div style="margin:10px 0;padding:10px 0;border-top:1px solid #e8e4de;border-bottom:1px solid #e8e4de">
-      <strong style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b">📄 Memorando Word</strong>
+      <strong style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b">Memorando Word</strong>
     </div>
     <div style="font-size:13px;line-height:2">
       <strong>Ref.:</strong> ${memo}<br>
@@ -349,8 +374,8 @@ async function generateExcel(){
     {width: 12},   // B Número sanción
     {width: 11},   // C *Operación
     {width: 9},    // D CASFIM
-    {width: 80},   // E Nombre Institución (más ancho)
-    {width: 16},   // F IMPORTE
+    {width: 88},   // E Nombre Institución (más ancho)
+    {width: 26},   // F IMPORTE
     {width: 26},   // G CUENTA DE RESULTADOS
     {width: 36},   // H TEXTO
   ];
@@ -365,7 +390,7 @@ async function generateExcel(){
     cell.font  = {name:'Calibri', size:11};
   });
   ws.getRow(3).height  = 22;  // título
-  ws.getRow(5).height  = 35;  // headers
+  ws.getRow(5).height  = 42;  // headers
   ws.getRow(6).height  = 16;  // datos
   ws.getRow(8).height  = 14;  // Notas:
   ws.getRow(9).height  = 14;
@@ -435,7 +460,7 @@ async function generateExcel(){
   setData('B6', 1,                          alignCC);
   setData('C6', operacion,                   alignCC);
   setData('D6', parseInt(casfim)||casfim,    alignCC);
-  setData('E6', inst,                        alignLC);
+  setData('E6', inst,                        alignCC);
   setData('F6', importe,                     alignCC, '#,##0.00');  // tipo número
   setData('G6', CUENTA, alignCC);  // formato General — sin numFmt
   setData('H6', texto,                       alignCC);
@@ -540,6 +565,12 @@ async function generateWord(){
       <w:pPr><w:jc w:val="left"/><w:spacing w:before="0" w:after="0"/><w:keepLines/></w:pPr>
       <w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/><w:vertAlign w:val="superscript"/></w:rPr><w:t>1</w:t></w:r>
       <w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr><w:t xml:space="preserve"> ${x(NOTA_TEXT)}</w:t></w:r>
+    </w:p>
+    <w:p>
+      <w:pPr><w:pageBreakBefore/><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr>
+      <w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>
+        <w:t>Documento firmado digitalmente, su validaci\u00f3n requiere hacerse electr\u00f3nicamente.</w:t>
+      </w:r>
     </w:p>
   `;
 
