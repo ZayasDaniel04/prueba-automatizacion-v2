@@ -1,158 +1,374 @@
 <!DOCTYPE html>
 <html lang="es">
+<!-- ══════════════════════════════════════════════════════════════════════════
+     index_v2.html — Generador de Documentos de Cobro 
+     Banco de México · GSSPIM
+     
+     DESCRIPCIÓN:
+       Página principal de la aplicación. Define toda la estructura HTML
+       (interfaz de usuario) y carga las librerías y estilos necesarios.
+       La lógica está en app2.js.
+     
+     FLUJO DE LA UI (secciones que aparecen progresivamente):
+       1. #card-carga   → siempre visible — cargar el Excel de sanciones
+       2. #sec-tabla    → aparece al cargar el Excel — tabla de registros
+       3. #sec-form     → aparece al seleccionar un registro — formulario editable
+       4. #sec-preview  → aparece al seleccionar o editar — vista previa
+       5. #sec-generar  → aparece al seleccionar o editar — botones de generación
+     ══════════════════════════════════════════════════════════════════════════ -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Favicon del Banco de México -->
 <link rel="icon" type="image/png" sizes="32x32" href="img/favicon_bm.png">
+
 <title>Generador de Documentos de Cobro V2 &#x2014; GSSPIM</title>
-<script src="xlsx.full.min.js"></script>
-<script src="jszip.min.js"></script>
-<script src="exceljs.min.js"></script>
+
+<!-- ── Librerías JavaScript (cargadas en head, disponibles globalmente) ──
+     IMPORTANTE: El orden de carga importa:
+     1. xlsx.full.min.js   → expone el objeto global XLSX (SheetJS)
+     2. jszip.min.js       → expone el objeto global JSZip
+     3. exceljs.min.js     → expone el objeto global ExcelJS
+     Estas librerías se usan en app2.js (cargado al final del body)
+-->
+<script src="xlsx.full.min.js"></script>   <!-- SheetJS: lectura del Excel de sanciones entrada -->
+<script src="jszip.min.js"></script>       <!-- JSZip: generación del .docx (ZIP + XML OOXML) -->
+<script src="exceljs.min.js"></script>     <!-- ExcelJS: generación del .xlsx con estilos -->
+
+<!-- Hoja de estilos principal de la aplicación -->
 <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     HEADER — Barra superior fija con logo y título
+     Permanece visible mientras el usuario hace scroll (position: sticky)
+     ══════════════════════════════════════════════════════════════════════════ -->
 <header>
-<div class="logo"><a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;"><img src="img/Logobm.svg" style="width:80px;height:80px;object-fit:contain;filter:brightness(0) invert(1);"></a></div>  <div>
+  <!-- Logo del Banco de México: invertido a blanco con CSS filter para que
+       sea visible sobre el fondo azul marino del header -->
+  <div class="logo">
+    <a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">
+      <img src="img/Logobm.svg" style="width:80px;height:80px;object-fit:contain;filter:brightness(0) invert(1);">
+    </a>
+  </div>
+  <div>
     <h1>Generador de Documentos de Cobro</h1>
     <p>Gerencia de Supervisi&#xF3;n de Sistemas de Pagos e Infraestructuras de Mercado</p>
   </div>
 </header>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     CONTENEDOR PRINCIPAL
+     Limita el ancho máximo a 1000px y centra el contenido en la página.
+     ══════════════════════════════════════════════════════════════════════════ -->
 <div class="container">
+
+  <!-- ── ZONA DE ALERTAS ──
+       Los mensajes de éxito/error se inyectan aquí dinámicamente por showAlert()
+       en app2.js. Se autodestruyen después de 7 segundos. -->
   <div id="alert-area"></div>
 
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       PASO 1 — CARGAR EXCEL DE SANCIONES
+       Siempre visible. El usuario selecciona el archivo Sanciones_impuestas.xlsm.
+       El input file está oculto; el botón visible lo activa programáticamente.
+       ══════════════════════════════════════════════════════════════════════════ -->
   <div class="card">
     <div class="card-title">Paso 1 &#x2014; Cargar Excel de Sanciones</div>
-    <div class="card-sub">Carga el archivo <strong>Sanciones_impuestas.xlsm</strong> para autocompletar los datos</div>
+    <div class="card-sub">
+      Carga el archivo <strong>Sanciones_impuestas.xlsm</strong> para autocompletar los datos
+    </div>
+
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <!-- Botón visible (verde) que activa el input file oculto -->
       <button class="btn btn-xl" id="btn-cargar">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <!-- Ícono SVG de subida de archivo -->
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
         Cargar Excel de Sanciones
       </button>
+
+      <!-- Estado del archivo: muestra "Ningún archivo cargado", "⏳ Cargando...",
+           "✓ nombre.xlsm — N registros cargados", o "❌ Error..." -->
       <span class="lbl-archivo" id="lbl-archivo">Ning&#xFA;n archivo cargado</span>
     </div>
+
+    <!-- Input file real (oculto con display:none).
+         Accept: solo acepta formatos Excel. El click se dispara desde btn-cargar.
+         Su valor se resetea después de cada carga para permitir recargar el mismo archivo. -->
     <input type="file" id="file-input" accept=".xlsx,.xlsm,.xls" style="display:none">
   </div>
 
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       PASO 2 — TABLA DE REGISTROS
+       Oculta hasta que se carga el Excel. Muestra todos los registros cargados
+       con un buscador de filtrado en tiempo real.
+       Al hacer clic en una fila se autocompletan los campos del Paso 3.
+       ══════════════════════════════════════════════════════════════════════════ -->
   <div class="card" id="sec-tabla" style="display:none">
     <div class="card-title">Paso 2 &#x2014; Selecciona el Registro</div>
-    <div class="card-sub">Busca por Instituci&#xF3;n, No. Memorando, Expediente o  No. Resoluci&#xF3;n, y haz clic en la fila</div>
+    <div class="card-sub">
+      Busca por Instituci&#xF3;n, No. Memorando, Expediente o No. Resoluci&#xF3;n, y haz clic en la fila
+    </div>
+
+    <!-- Buscador: filtra el array registros en tiempo real (mínimo 2 caracteres) -->
     <div class="search-bar">
       <input type="text" id="buscador" placeholder="Buscar...">
     </div>
+
+    <!-- Tabla con scroll vertical (máx. 320px de altura definida en styles.css)
+         El thead tiene position:sticky para que los encabezados sean siempre visibles -->
     <div class="tbl-wrap">
       <table>
         <thead>
           <tr>
-            <th>Instituci&#xF3;n</th> 
-            <th>No. Memorando</th>
-            <th>Expediente</th>
-            <th>No. Resoluci&#xF3;n</th>
+            <th>Instituci&#xF3;n</th>      <!-- 35% de ancho (definido en styles.css) -->
+            <th>No. Memorando</th>          <!-- 18% de ancho -->
+            <th>Expediente</th>             <!-- 22% de ancho -->
+            <th>No. Resoluci&#xF3;n</th>   <!-- 25% de ancho -->
           </tr>
         </thead>
-        <tbody id="tbl-body"></tbody> 
+        <!-- Las filas se generan dinámicamente por mostrarTabla() en app2.js -->
+        <tbody id="tbl-body"></tbody>
       </table>
     </div>
   </div>
 
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       PASO 3 — FORMULARIO EDITABLE
+       Oculto hasta que se selecciona un registro. Todos los campos se
+       autocompletan desde el Excel pero son 100% editables por el usuario.
+       Se divide en dos sub-secciones:
+         A. Datos del Layout Excel (BBVA)
+         B. Datos del Memorando Word
+       ══════════════════════════════════════════════════════════════════════════ -->
   <div class="card" id="sec-form" style="display:none">
     <div class="card-title">Paso 3 &#x2014; Verifica y Edita los Datos</div>
-    <div class="card-sub">Todos los campos se autocompletan desde el Excel pero puedes editarlos libremente</div>
+    <div class="card-sub">
+      Todos los campos se autocompletan desde el Excel pero puedes editarlos libremente
+    </div>
+
+    <!-- SUB-SECCIÓN A: Datos del Layout Excel (BBVA) -->
     <div class="grid">
+
+      <!-- Nombre completo de la institución sancionada
+           Ocupa todo el ancho del grid (clase 'full') -->
       <div class="fg full">
-        <label>Nombre Instituci&#xF3;n <span class="req">*</span></label> 
+        <label>Nombre Instituci&#xF3;n <span class="req">*</span></label>
         <input type="text" id="inst-nombre" placeholder="Nombre completo de la instituci&#xF3;n">
       </div>
+
+      <!-- CASFIM: código de la institución en los sistemas de Banco de México -->
       <div class="fg">
         <label>CASFIM <span class="req">*</span></label>
         <input type="text" id="casfim" placeholder="Ej: 40012">
       </div>
+
+      <!-- Tipo de operación: S=Sanción (cobro de multa) | D=Devolución (reembolso) -->
       <div class="fg">
         <label>Tipo de Operaci&#xF3;n</label>
-        <select id="operacion"><option value="S">S &#x2014; Sanci&#xF3;n</option><option value="D">D &#x2014; Devoluci&#xF3;n</option></select>
+        <select id="operacion">
+          <option value="S">S &#x2014; Sanci&#xF3;n</option>
+          <option value="D">D &#x2014; Devoluci&#xF3;n</option>
+        </select>
       </div>
+
+      <!-- Número de resolución de la sanción, ej: S22-118-2026 -->
       <div class="fg">
         <label>No. Resoluci&#xF3;n <span class="req">*</span></label>
         <input type="text" id="no-res" placeholder="Ej: S22-118-2026">
       </div>
+
+      <!-- Número de expediente del procedimiento de imposición de sanción -->
       <div class="fg">
         <label>Expediente <span class="req">*</span></label>
         <input type="text" id="exp" placeholder="Ej: SP.ID.CDA.2025.109">
       </div>
+
+      <!-- Importe a cobrar en pesos mexicanos.
+           Se deja vacío al autocompletar porque puede diferir del monto del Excel
+           (por actualizaciones o por el descuento de 20% por pronto pago).
+           step="0.01" permite ingresar centavos. -->
       <div class="fg full">
         <label>Importe (MXN) <span class="req">*</span></label>
         <input type="number" id="importe" placeholder="Ingresa el importe" min="0" step="0.01">
       </div>
+
+      <!-- Campo TEXTO del layout BBVA.
+           Se autogenera como "No.Resolución/Expediente" al seleccionar un registro.
+           Si el usuario lo edita manualmente, el autogenerado se desactiva.
+           maxlength="60" permite editar más allá del límite de 42 para mostrar el error. -->
       <div class="fg full">
         <label>* TEXTO (m&#xE1;x. 42 caracteres) <span class="req">*</span></label>
         <input type="text" id="texto" placeholder="S22-118-2026/SP.ID.CDA.2025.109" maxlength="60">
+        <!-- Contador de caracteres: cambia a dorado (warn) al superar 35,
+             y a rojo negrita (over) al superar 42 -->
         <div class="cc" id="cc">0 / 42</div>
       </div>
-    </div>
+
+    </div><!-- /grid -->
+
+    <!-- Separador visual entre sección Excel y sección Word -->
     <hr class="div">
-    <div style="margin-bottom:16px;font-weight:600;font-size:13px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px">Datos del Memorando Word</div>
+    <div style="margin-bottom:16px;font-weight:600;font-size:13px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px">
+      Datos del Memorando Word
+    </div>
+
+    <!-- SUB-SECCIÓN B: Datos del Memorando Word -->
     <div class="grid">
+
+      <!-- Número del memorando, ej: D02-2026-079
+           Se usa como referencia (Ref.) en el documento y como nombre del archivo -->
       <div class="fg">
         <label>No. Memorando (Ref.) <span class="req">*</span></label>
         <input type="text" id="memo" placeholder="Ej: D02-2026-079">
       </div>
+
+      <!-- Fecha del memorando = fecha de solicitud de cobro.
+           Aparece en el encabezado del documento: "Ciudad de México, a X de mes de YYYY" -->
       <div class="fg">
         <label>Fecha de solicitud de cobro<span class="req">*</span></label>
         <input type="date" id="f-memo">
         <div class="hint">Fecha de solicitud de cobro</div>
       </div>
+
+      <!-- Fecha en que la institución firmó/envió la autorización de cargo.
+           Aparece en el cuerpo: "referimos al escrito de fecha X..." -->
       <div class="fg">
         <label>Fecha de autorizaci&#xF3;n de cobro<span class="req">*</span></label>
         <input type="date" id="f-escrito">
         <div class="hint">Fecha autorizaci&#xF3;n de cobro</div>
       </div>
+
+      <!-- Fecha en que Banco de México recibió la autorización de la institución.
+           Del día de esta fecha se extrae el número de día para el memorando:
+           "recibido por este Banco Central el día X del mismo mes y año" -->
       <div class="fg">
         <label>Fecha de recepci&#xF3;n de autorizaci&#xF3;n de cobro <span class="req">*</span></label>
         <input type="date" id="f-recep">
         <div class="hint">Fecha de recepci&#xF3;n de autorizaci&#xF3;n de cobro</div>
       </div>
+
+    </div><!-- /grid -->
+  </div><!-- /sec-form -->
+
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       VISTA PREVIA EN TIEMPO REAL
+       Oculta hasta que se selecciona un registro o se edita algún campo.
+       Muestra un resumen visual de los datos que irán en cada documento.
+       El contenido se actualiza por updPreview() en app2.js.
+       ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="card" id="sec-preview" style="display:none">
+    <div class="card-title">Vista Previa</div>
+    <!-- La preview inicial muestra texto de placeholder;
+         se actualiza dinámicamente con HTML generado en updPreview() -->
+    <div class="preview-box" id="preview">
+      <em style="color:var(--muted)">Selecciona un registro para ver la vista previa...</em>
     </div>
   </div>
 
-  <div class="card" id="sec-preview" style="display:none">
-    <div class="card-title">Vista Previa</div>
-    <div class="preview-box" id="preview"><em style="color:var(--muted)">Selecciona un registro para ver la vista previa...</em></div>
-  </div>
 
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       PASO 4 — GENERAR DOCUMENTOS
+       Oculto hasta que se selecciona un registro o se edita algún campo.
+       Tres botones permiten generar cada documento por separado o ambos juntos.
+       ══════════════════════════════════════════════════════════════════════════ -->
   <div class="card" id="sec-generar" style="display:none">
     <div class="card-title">Generar Documentos</div>
     <div class="btns">
+
+      <!-- Botón azul marino: genera solo el layout Excel (.xlsx)
+           Valida únicamente los campos del layout (no las fechas del memorando) -->
       <button class="btn btn-p" onclick="generateExcel()">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
         Generar Layout (Excel)
       </button>
+
+      <!-- Botón dorado: genera solo el memorando Word (.docx)
+           Valida todos los campos, incluyendo las fechas del memorando -->
       <button class="btn btn-s" onclick="generateWord()">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
         Generar Memorando (Word)
       </button>
+
+      <!-- Botón outline: genera ambos documentos en secuencia.
+           Valida todos los campos de ambos documentos antes de iniciar.
+           Agrega 600ms de delay entre descargas para evitar bloqueos del navegador. -->
       <button class="btn btn-o" onclick="generateAll()">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="8 17 12 21 16 17"/>
+          <line x1="12" y1="12" x2="12" y2="21"/>
+          <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/>
+        </svg>
         Generar Ambos
       </button>
+
     </div>
   </div>
-</div>
+
+</div><!-- /container -->
+
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     FOOTER
+     Barra inferior con información del sistema.
+     ══════════════════════════════════════════════════════════════════════════ -->
 <footer>Banco de M&#xE9;xico &#xB7; GSSPIM &#xB7; Generador con carga desde Excel</footer>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     SCRIPTS — Se cargan al final del body para que el DOM ya esté disponible
+     ══════════════════════════════════════════════════════════════════════════ -->
+
+<!-- Lógica principal de la aplicación (debe ir ANTES del script inline) -->
 <script src="app2.js"></script>
+
+<!-- Script inline: conecta los eventos de los campos del formulario para que
+     muestren la vista previa y los botones de generación automáticamente
+     cuando el usuario empieza a llenar datos manualmente (sin cargar Excel).
+     Complementa los listeners ya definidos en app2.js. -->
 <script>
-const obsFields=['inst-nombre','casfim','no-res','exp','importe','texto','memo','f-memo','f-escrito','f-recep'];
-obsFields.forEach(id=>{
-  const el=document.getElementById(id);
-  if(el) el.addEventListener('input',()=>{
-    document.getElementById('sec-preview').style.display='block';
-    document.getElementById('sec-generar').style.display='block';
-    updPreview();
-  });
-  if(el) el.addEventListener('change',()=>{
-    document.getElementById('sec-preview').style.display='block';
-    document.getElementById('sec-generar').style.display='block';
-    updPreview();
-  });
+// IDs de todos los campos que deben activar la vista previa al cambiar
+const obsFields = [
+  'inst-nombre', 'casfim', 'no-res', 'exp',
+  'importe', 'texto', 'memo', 'f-memo', 'f-escrito', 'f-recep'
+];
+
+obsFields.forEach(id => {
+  const el = document.getElementById(id);
+  if(el){
+    // Al escribir en un campo: mostrar las secciones ocultas y actualizar preview
+    el.addEventListener('input', () => {
+      document.getElementById('sec-preview').style.display = 'block';
+      document.getElementById('sec-generar').style.display = 'block';
+      updPreview(); // Función definida en app2.js
+    });
+    // Al cambiar un campo (útil para selects y date inputs): igual
+    el.addEventListener('change', () => {
+      document.getElementById('sec-preview').style.display = 'block';
+      document.getElementById('sec-generar').style.display = 'block';
+      updPreview();
+    });
+  }
 });
 </script>
+
 </body>
 </html>
