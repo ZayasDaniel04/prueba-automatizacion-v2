@@ -1,0 +1,9 @@
+# Excel de sanciones (datos sensibles, no se sube al repo)
+Sanciones*.xlsm
+Sanciones*.xlsx
+
+# Documentos generados (salida, no código fuente)
+UL_*.docx
+UL_*.xlsx
+
+# Carpeta de imágenes generadas/temporales, si aplica

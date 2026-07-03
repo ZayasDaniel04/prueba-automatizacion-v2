@@ -6,8 +6,8 @@
 // DESCRIPCIÓN GENERAL:
 //   Esta aplicación web cliente (sin backend) automatiza la generación de dos
 //   documentos para el cobro de sanciones a instituciones financieras:
-//     1. Layout Excel (.xlsx)  → instrucción de cargo para BBVA
-//     2. Memorando Word (.docx) → oficio interno de solicitud de cargo
+//     1. Layout Excel (.xlsx) 
+//     2. Memorando Word (.docx) 
 //
 // DEPENDENCIAS (librerías cargadas en el HTML):
 //   - xlsx.full.min.js  → SheetJS: lectura del Excel de entrada (sanciones)
@@ -855,7 +855,7 @@ async function generateExcel(){
   setData('B6', 1,                          alignCC);           // Número de sanción: siempre 1
   setData('C6', operacion,                   alignCC);           // 'S' o 'D'
   setData('D6', parseInt(casfim)||casfim,    alignCC);           // CASFIM como número si es posible
-  setData('E6', inst,                        alignCC);           // Nombre de la institución
+  setData('E6', inst,                        alignLC);           // Nombre de la institución
   setData('F6', importe,                     alignCC, '#,##0.00'); // Importe con formato contable
   setData('G6', CUENTA,                      alignCC);           // Cuenta 385050311 (General — sin numFmt)
   setData('H6', texto,                       alignCC);           // TEXTO del layout (máx. 42 chars)
@@ -969,7 +969,7 @@ async function generateWord(){
    * @returns {string} XML del elemento <w:pPr>
    */
   function pPr(align, ind){
-    let s = `<w:pPr><w:jc w:val="${align||'both'}"/><w:spacing w:before="0" w:after="0"/>`;
+    let s = `<w:pPr><w:jc w:val="${align||'both'}"/><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>`;
     if(ind) s += `<w:ind w:left="${ind}"/>`;
     s += '</w:pPr>';
     return s;
@@ -998,6 +998,19 @@ async function generateWord(){
    */
   function para(content, align, ind){
     return `<w:p>${pPr(align, ind)}${content}</w:p>`;
+  }
+
+  /**
+   * Genera el XML de una referencia REAL a nota al pie de Word (<w:footnoteReference>).
+   * A diferencia de un superíndice manual, esto hace que Word dibuje la línea
+   * separadora y calcule el espaciado de forma nativa (igual que al insertar
+   * una nota al pie manualmente desde el menú Referencias de Word).
+   *
+   * @param {number} id - Id de la nota al pie (debe coincidir con footnotesXml)
+   * @returns {string} XML del elemento <w:r> con la referencia
+   */
+  function footnoteRef(id){
+    return `<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="${id}"/></w:r>`;
   }
 
   /**
@@ -1052,7 +1065,7 @@ async function generateWord(){
     ${para(
       run('Sobre el particular, y con la finalidad de concluir con el procedimiento de imposici\u00f3n de sanci\u00f3n, les solicitamos que efect\u00faen el cargo por ',oC) +
       run(impFmt+' ('+impWords+')',oCB) +    // Importe en número y letras (negrita)
-      run('1',oCSup) +                       // Superíndice ¹ que referencia la nota al pie
+      footnoteRef(1) +                       // Referencia REAL a nota al pie de Word (¹)
       run(', monto actualizado de conformidad con el art\u00edculo 67, de la Ley del Banco de M\u00e9xico, a la cuenta que le lleva Banco de M\u00e9xico a ',oC) +
       run(inst+',',oCB) +
       run(' y los fondos sean acreditados en la cuenta ',oC) +
@@ -1067,22 +1080,7 @@ async function generateWord(){
     ${para(run('Gerencia de Supervisi\u00f3n de Sistemas de Pagos',oCB),'center')}
     ${para(run('e Infraestructuras de Mercado',oCB),'center')}
     <w:p>
-      <w:pPr>
-        <w:jc w:val="left"/>
-        <w:spacing w:before="1200" w:after="0"/>
-        <w:keepWithNext/>
-        <w:ind w:right="6000"/>
-        <w:pBdr><w:top w:val="single" w:sz="6" w:space="4" w:color="000000"/></w:pBdr>
-      </w:pPr>
-      <w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r>
-    </w:p>
-    <w:p>
-      <w:pPr><w:jc w:val="left"/><w:spacing w:before="0" w:after="0"/><w:keepLines/></w:pPr>
-      <w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/><w:vertAlign w:val="superscript"/></w:rPr><w:t>1</w:t></w:r>
-      <w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr><w:t xml:space="preserve"> ${x(NOTA_TEXT)}</w:t></w:r>
-    </w:p>
-    <w:p>
-      <w:pPr><w:pageBreakBefore/><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr>
+      <w:pPr><w:pageBreakBefore/><w:jc w:val="center"/><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>
       <w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>
         <w:t>Documento firmado digitalmente, su validaci\u00f3n requiere hacerse electr\u00f3nicamente.</w:t>
       </w:r>
@@ -1093,11 +1091,27 @@ async function generateWord(){
   // Aparece en todas las páginas del documento con la leyenda "Uso Limitado"
   const footerXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr>
+  <w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>
     <w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:b/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="C00000"/></w:rPr><w:t>Uso Limitado</w:t></w:r></w:p>
-  <w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr>
+  <w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>
     <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t>Informaci\u00f3n cuyo acceso est\u00e1 restringido a un grupo limitado de personas empleadas por el Banco de M\u00e9xico y, en su caso, personas ajenas al mismo.</w:t></w:r></w:p>
 </w:ftr>`;
+
+  // ── XML de la nota al pie REAL (word/footnotes.xml) ──
+  // Contiene el separador (la línea, la dibuja Word), y el texto de la nota
+  // con id="1", que es el que referencia footnoteRef(1) en el cuerpo.
+  const footnotesXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:footnote w:type="separator" w:id="-1"><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:separator/></w:r></w:p></w:footnote>
+  <w:footnote w:type="continuationSeparator" w:id="0"><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:continuationSeparator/></w:r></w:p></w:footnote>
+  <w:footnote w:id="1">
+    <w:p>
+      <w:pPr><w:jc w:val="both"/><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>
+      <w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteRef/></w:r>
+      <w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr><w:t xml:space="preserve"> ${x(NOTA_TEXT)}</w:t></w:r>
+    </w:p>
+  </w:footnote>
+</w:footnotes>`;
 
   // ── XML principal del documento ──
   // Define la página (tamaño carta US) y márgenes, y referencia el footer
@@ -1118,6 +1132,7 @@ async function generateWord(){
   const relsXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>
 </Relationships>`;
 
   // Tipos de contenido MIME para cada parte del ZIP
@@ -1127,6 +1142,7 @@ async function generateWord(){
   <Default Extension="xml" ContentType="application/xml"/>
   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
   <Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
+  <Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>
 </Types>`;
 
   // Relación raíz del paquete ZIP (_rels/.rels → word/document.xml)
@@ -1141,6 +1157,7 @@ async function generateWord(){
   zip.file('_rels/.rels',         mainRels);           // Relación raíz
   zip.file('word/document.xml',   docXml);             // Cuerpo del documento
   zip.file('word/footer1.xml',    footerXml);          // Pie de página
+  zip.file('word/footnotes.xml',  footnotesXml);        // Nota al pie real
   zip.file('word/_rels/document.xml.rels', relsXml);  // Relaciones del documento
 
   // Generar el blob con el tipo MIME correcto para .docx

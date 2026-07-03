@@ -47,8 +47,7 @@
      Permanece visible mientras el usuario hace scroll (position: sticky)
      ══════════════════════════════════════════════════════════════════════════ -->
 <header>
-  <!-- Logo del Banco de México: invertido a blanco con CSS filter para que
-       sea visible sobre el fondo azul marino del header -->
+  <!-- Logo del Banco de México -->
   <div class="logo">
     <a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">
       <img src="img/Logobm.svg" style="width:80px;height:80px;object-fit:contain;filter:brightness(0) invert(1);">
@@ -229,7 +228,7 @@
 
       <!-- Número del memorando, ej: D02-2026-079
            Se usa como referencia (Ref.) en el documento y como nombre del archivo -->
-      <div class="fg">
+      <div   class="fg">
         <label>No. Memorando (Ref.) <span class="req">*</span></label>
         <input type="text" id="memo" placeholder="Ej: D02-2026-079">
       </div>
