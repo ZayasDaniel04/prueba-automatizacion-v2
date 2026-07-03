@@ -971,6 +971,10 @@ async function generateWord(){
   function pPr(align, ind){
     let s = `<w:pPr><w:jc w:val="${align||'both'}"/><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>`;
     if(ind) s += `<w:ind w:left="${ind}"/>`;
+    // Marca de párrafo con fuente/tamaño fijos, para que párrafos vacíos no
+    // hereden la fuente por defecto de Word (Aptos, más alta que Calibri) y
+    // así no se acumule espacio extra que empuje la nota al pie a otra página.
+    s += `<w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>`;
     s += '</w:pPr>';
     return s;
   }
@@ -1102,12 +1106,12 @@ async function generateWord(){
   // con id="1", que es el que referencia footnoteRef(1) en el cuerpo.
   const footnotesXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:footnote w:type="separator" w:id="-1"><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:separator/></w:r></w:p></w:footnote>
-  <w:footnote w:type="continuationSeparator" w:id="0"><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:continuationSeparator/></w:r></w:p></w:footnote>
+  <w:footnote w:type="separator" w:id="-1"><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr><w:separator/></w:r></w:p></w:footnote>
+  <w:footnote w:type="continuationSeparator" w:id="0"><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr><w:continuationSeparator/></w:r></w:p></w:footnote>
   <w:footnote w:id="1">
     <w:p>
       <w:pPr><w:jc w:val="both"/><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>
-      <w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteRef/></w:r>
+      <w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="18"/><w:szCs w:val="18"/><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteRef/></w:r>
       <w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr><w:t xml:space="preserve"> ${x(NOTA_TEXT)}</w:t></w:r>
     </w:p>
   </w:footnote>
